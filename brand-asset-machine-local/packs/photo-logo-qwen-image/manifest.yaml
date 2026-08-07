@@ -1,0 +1,56 @@
+# PHOTO + LOGO — Qwen-Image (Apache-2.0) install manifest.
+# Consumable by the comfyui-mcp `apply_manifest` tool:
+#   apply_manifest --path brand-asset-machine-local/packs/photo-logo-qwen-image/manifest.yaml
+#
+# Adapted from the bundled comfyui-mcp `qwen-image` pack manifest. Trimmed:
+# the upstream pack also installs a WAN 2.2 T2V "combo refine" second stage
+# (a second UNet + umt5 encoder + 2 extra LoRAs + 2 upscalers). This skill does
+# not use that refine stage, so those entries are removed. What remains is the
+# plain Qwen-Image txt2img stack that packs/photo-logo-qwen-image/workflow.json
+# actually references.
+#
+# Mirror base: https://huggingface.co/Aitrepreneur/FLX/resolve/main
+# Upstream weights: https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI
+# Licence: Apache-2.0 (commercial use clean) — see references/models.md.
+
+pip: []
+
+custom_nodes:
+  # The ONLY custom node our workflow.json requires: UnetLoaderGGUF + CLIPLoaderGGUF.
+  - https://github.com/city96/ComfyUI-GGUF
+  # The four below are NOT needed by our graph (we use core LoraLoaderModelOnly
+  # instead of rgthree's Power Lora Loader). Install them only if you intend to
+  # open an upstream Qwen GUI workflow that uses their widgets.
+  # - https://github.com/rgthree/rgthree-comfy
+  # - https://github.com/yolain/ComfyUI-Easy-Use
+  # - https://github.com/kijai/ComfyUI-KJNodes
+  # - https://github.com/cubiq/ComfyUI_essentials
+
+models:
+  # --- Text encoder ---
+  - url: https://huggingface.co/Aitrepreneur/FLX/resolve/main/Qwen2.5-VL-7B-Instruct-UD-Q4_K_S.gguf
+    local_path: text_encoders/Qwen2.5-VL-7B-Instruct-UD-Q4_K_S.gguf
+
+  # --- VAE ---
+  - url: https://huggingface.co/Aitrepreneur/FLX/resolve/main/qwen_image_vae.safetensors
+    local_path: vae/qwen_image_vae.safetensors
+
+  # --- Diffusion UNet (GGUF) — Q8_0 tier active; TESTED on 24GB+ (RTX 5090) ---
+  - url: https://huggingface.co/Aitrepreneur/FLX/resolve/main/Qwen_Image_Distill-Q8_0.gguf
+    local_path: unet/Qwen_Image_Distill-Q8_0.gguf
+  # Lower-VRAM quants — URLs verified to resolve, but UNTESTED by us.
+  # Swap the local_path filename in workflow.json node "1" to match if you use one.
+  # Q5_K_S (12-24GB):
+  # - url: https://huggingface.co/Aitrepreneur/FLX/resolve/main/Qwen_Image_Distill-Q5_K_S.gguf
+  #   local_path: unet/Qwen_Image_Distill-Q5_K_S.gguf
+  # Q4_K_S (<12GB), 11.3 GB:
+  # - url: https://huggingface.co/Aitrepreneur/FLX/resolve/main/Qwen_Image_Distill-Q4_K_S.gguf
+  #   local_path: unet/Qwen_Image_Distill-Q4_K_S.gguf
+
+  # --- Acceleration LoRA ---
+  # 8-step Lightning. Our workflow runs steps=8, cfg=1.0, euler/simple.
+  - url: https://huggingface.co/Aitrepreneur/FLX/resolve/main/Qwen-Image-Lightning-8steps-V1.0.safetensors
+    local_path: loras/Qwen-Image-Lightning-8steps-V1.0.safetensors
+  # 4-step alt (set KSampler steps=4 to match):
+  # - url: https://huggingface.co/Aitrepreneur/FLX/resolve/main/Qwen-Image-Lightning-4steps-V1.0.safetensors
+  #   local_path: loras/Qwen-Image-Lightning-4steps-V1.0.safetensors

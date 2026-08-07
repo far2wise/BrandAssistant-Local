@@ -63,3 +63,9 @@ block at the top of every prompt, changing only the scene.
 - **Editing beats regenerating** for small fixes (recolour a label to the palette,
   swap a background): use **Qwen-Image-Edit** rather than rolling the dice on a
   fresh generation that may drift off-model.
+  **⚠️ Not installed by default.** `packs/photo-logo-qwen-image/` installs only the
+  *text* half of Qwen2.5-VL (no `mmproj` file), which is all txt2img needs. Loading
+  it logs `Qwen-Image-Edit will be broken!` — harmless for generation, but the edit
+  path genuinely will not work until you install a matching mmproj file and the
+  Qwen-Image-Edit UNet. Untested by this skill. If you need edits today, prefer
+  Method B (reference conditioning) and regenerate.

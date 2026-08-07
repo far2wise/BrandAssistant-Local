@@ -1,0 +1,98 @@
+name: motion-wan22-i2v
+display_name: MOTION — Wan 2.2 I2V A14B (GGUF)
+family: wan
+kind: img2vid
+description: >-
+  The MOTION half of the Brand Asset Machine. Wan 2.2 image-to-video A14B as a
+  two-expert (high-noise then low-noise) mixture, each with its Lightning 4-step
+  LoRA. Turns the best PHOTO still into the site's hero background loop.
+runtime: local
+licence: Apache-2.0 (commercial use clean)
+
+# --- Why Wan and not LTX-2.3 ---
+model_choice_rationale: >-
+  Both candidates were inspected on this machine. The bundled `ltx-2.3-img2vid`
+  workflow.json parses but has only FOUR top-level nodes — the whole pipeline is
+  hidden inside a subgraph definition (uuid 2454ad83-...), which is fine in the
+  GUI but awkward to enqueue headlessly. The bundled `wan-longer-videos-i2v`
+  workflow.json is a real, explicit 107-node graph. Wan is also Apache-2.0, while
+  LTX-2.3 is Lightricks-licensed and would have needed a commercial-terms review.
+  Wan therefore wins on both counts and we did not adopt LTX.
+  NOTE: a prior report of wan-longer-videos-i2v shipping a 0-byte workflow.json
+  did NOT reproduce here — the file is 75,645 bytes in this install. Check yours.
+
+# --- What we actually tested, on what ---
+tested:
+  status: VERIFIED end-to-end (real playable clip produced, not just installed)
+  date: 2026-08-06
+  gpu: NVIDIA GeForce RTX 5090, 32 GB VRAM (the 24GB+ tier)
+  comfyui: 0.30.0 / Python 3.12.11 / PyTorch 2.10.0+cu130
+  quant: Wan2.2-I2V-A14B-{High,Low}Noise-Q4_K_S.gguf (8.1 GB each)
+  results:
+    - >-
+      832x480, 81 frames @ 24 fps — 102.6 s. ffprobe: h264 / 832x480 / 81 frames
+      / 3.375 s. First-vs-last-frame mean pixel delta 15.25 over the full frame,
+      i.e. genuine motion, not a frozen clip.
+    - >-
+      1280x720, 81 frames @ 24 fps — 182.4 s. ffprobe: h264 / 1280x720 /
+      81 frames / 3.375 s. This is the resolution shipped in workflow.json, so
+      the shipped default is the tested one.
+    - >-
+      The start frame was a still produced by the photo-logo-qwen-image pack,
+      staged into ComfyUI's input dir — so the two packs are confirmed to chain.
+  vram_headroom: >-
+    Comfortable. The two experts load SEQUENTIALLY (~8.5 GB each), so peak VRAM is
+    roughly one expert plus the 5 GB text encoder, not both experts at once.
+    No OOM at 720p on 32 GB.
+
+untested:
+  - >-
+    Q8_0 UNets (14.3 GB each). URLs confirmed to RESOLVE but NOT run by us.
+  - Lower-VRAM tiers (16GB / 12GB / 8GB) — no smaller quant was exercised.
+  - >-
+    Clip lengths other than 81 frames. Wan wants 4n+1; 121 frames would give
+    ~5.0 s at 24 fps but we did not run it.
+
+# --- Settings baked into workflow.json (inherited from the tested upstream graph) ---
+settings:
+  sampler: euler
+  scheduler: simple
+  cfg: 1.0                 # Lightning LoRAs want cfg 1.0
+  shift: 5.0               # ModelSamplingSD3, on BOTH experts
+  total_steps: 4
+  split: "high-noise expert runs steps 0-2 (returns leftover noise); low-noise expert runs steps 2-4"
+  frame_rate: 24
+  length: 81               # must be 4n+1
+  clip_type: wan
+looping_tip: >-
+  Set VHS_VideoCombine `pingpong: true` to play forward then reverse — the cheap
+  way to make a seamless hero loop with no visible cut. VHS also writes a poster
+  PNG next to the mp4, which is exactly what the <video poster=""> attribute needs.
+
+# --- Provenance and the fix-ups we had to make ---
+adapted_from: >-
+  The comfyui-mcp bundled `wan-longer-videos-i2v` pack. Contents were COPIED into
+  this repo — the bundled packs live under an npx cache path that changes between
+  invocations and must never be referenced.
+manual_fixups:
+  - >-
+    SLICED the upstream 107-node graph down to ONE segment. Upstream chains five
+    image-to-video segments to build a long video; a brand hero loop needs one.
+    Our graph is 16 nodes and renders a single clip.
+  - >-
+    Replaced rgthree's "Power Lora Loader" with core LoraLoaderModelOnly (x2),
+    and dropped RIFE frame interpolation and the multi-segment batching. This cuts
+    the custom-node requirement from six packages to two: ComfyUI-GGUF and
+    ComfyUI-VideoHelperSuite.
+upstream_bug_noted: >-
+  The bundled manifest's comment block says "UNets (GGUF, Q8_0 tier)" but the URLs
+  underneath it are Q4_K_S — so the upstream pack actually installs Q4_K_S. Ours
+  keeps Q4_K_S and labels it accurately.
+known_gotchas:
+  - >-
+    Same custom-node placement and pip-dependency gotchas as the photo pack — see
+    packs/photo-logo-qwen-image/pack.yaml `known_gotchas`.
+  - >-
+    VHS_VideoCombine output often does NOT register in ComfyUI's /history, so a
+    finished render can look like it produced nothing. Confirm the mp4 with
+    get_image action:"list_outputs" (a filesystem scan) rather than get_history.
