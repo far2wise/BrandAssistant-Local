@@ -61,9 +61,17 @@ fallbacks) is in [`brand-asset-machine-local/references/hardware-tiers.md`](bran
    ```bash
    claude mcp add comfyui -- npx -y comfyui-mcp
    ```
-3. **Install the skill.** Point your Claude skills directory at
-   `brand-asset-machine-local/`, or install the packaged `.skill` file from
-   Releases.
+3. **Install the skill.** Claude Code loads skills straight out of a
+   `skills/` folder — copy or symlink `brand-asset-machine-local/` into one:
+   - **Every project:** `~/.claude/skills/brand-asset-machine-local/`
+   - **Just one project:** `<project>/.claude/skills/brand-asset-machine-local/`
+
+   ```bash
+   ln -s "$(pwd)/brand-asset-machine-local" ~/.claude/skills/brand-asset-machine-local
+   ```
+
+   Restart Claude Code (or start a new session) and it picks the skill up
+   automatically — no separate install step or packaged file required.
 
 ## Usage
 
