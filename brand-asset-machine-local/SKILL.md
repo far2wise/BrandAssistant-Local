@@ -175,9 +175,13 @@ straight into Claude Design.
 
 ## Reference files
 
-- `references/hardware-tiers.md` — **read this every run.** VRAM cheat sheet: which
-  three models to use per GPU tier, resolutions, and per-image/per-clip timings.
-- `references/models.md` — model download list, ComfyUI folders, alpha/background
-  removal, and licensing (matters for commercial client work).
+- `packs/` — the two installer packs this skill ships (`photo-logo-qwen-image/`,
+  `motion-wan22-i2v/`). Each `pack.yaml` records what's actually tested, the
+  install gotchas, and any fix-ups made to the graph — read it before running
+  that pack for the first time.
+- `references/hardware-tiers.md` — **read this every run.** Which GGUF quant to
+  use per GPU tier, resolutions, and per-image/per-clip timings.
+- `references/models.md` — what each pack installs, ComfyUI folders, alpha/
+  background removal, and licensing (matters for commercial client work).
 - `references/comfyui-mcp-setup.md` — install ComfyUI + connect the local MCP.
 - `references/consistency.md` — the three ways to lock the hero product's look.
