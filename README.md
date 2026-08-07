@@ -111,13 +111,26 @@ without touching WSL2.
    [`references/comfyui-mcp-setup.md`](brand-asset-machine-local/references/comfyui-mcp-setup.md)
    for the manual `%USERPROFILE%\.claude.json` alternative if you'd rather
    skip the CLI install.
-4. **Install the skill** — copy `brand-asset-machine-local/` into
-   `%USERPROFILE%\.claude\skills\brand-asset-machine-local`. Symlinks work too
-   (`mklink /D` in an elevated prompt), but a plain copy is less fuss — just
-   re-copy after `git pull`.
-5. **Open the project in Claude Code Desktop without the WSL environment
-   picker**, so it stays on the native Windows config. Restart and the skill
-   loads automatically.
+4. **Get this repo onto the Windows filesystem, then install the skill.** If
+   you've only ever used this repo from inside WSL2, it isn't visible to
+   native Windows yet — `C:\...` and `/home/...` are different filesystems.
+   Clone it fresh on Windows (don't copy across the WSL2 boundary):
+   ```powershell
+   git clone https://github.com/far2wise/BrandAssistant-Local.git C:\Users\<you>\BrandAssistant-Local
+   Copy-Item -Recurse "C:\Users\<you>\BrandAssistant-Local\brand-asset-machine-local" "$env:USERPROFILE\.claude\skills\brand-asset-machine-local"
+   ```
+   Symlinks work too (`mklink /D` in an elevated prompt) if you'd rather not
+   re-copy after `git pull`. Verify it landed:
+   ```powershell
+   Test-Path "$env:USERPROFILE\.claude\skills\brand-asset-machine-local\SKILL.md"
+   ```
+   should print `True`.
+5. **Fully quit and reopen Claude Code Desktop** (a new chat/task in an
+   already-running Desktop isn't enough — it only watches skills directories
+   that existed when it started) **without the WSL environment picker**, so it
+   stays on the native Windows config. Or open a brand-new terminal and run
+   `claude` there. Ask it to confirm: "are you using the
+   brand-asset-machine-local skill?"
 
 ## Usage
 
