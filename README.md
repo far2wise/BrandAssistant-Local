@@ -89,38 +89,34 @@ Use this if ComfyUI runs in a Linux shell — including inside WSL2 on Windows.
 ### Windows (native, no WSL2)
 
 Use this if ComfyUI runs directly on Windows and you want Claude Code Desktop
-without touching WSL2.
+without touching WSL2. Every step below was hit-tested against real footguns —
+follow it in order and you'll skip all of them.
 
 1. **Install [Node.js for Windows](https://nodejs.org/)** (needed for `npx`).
-2. **Get ComfyUI running natively on Windows** — desktop build defaults to
-   `http://127.0.0.1:8000`, the portable/CLI build to `http://127.0.0.1:8188`.
-3. **Add the MCP server.** Desktop's Connectors panel only lists pre-published
-   services — it won't find `comfyui-mcp` by search. Instead, install the CLI
-   separately (Desktop bundles the engine but not the `claude` command) and
-   use it to add the server:
+
+2. **Get ComfyUI running natively on Windows**, and note which port it prints
+   on startup — it varies by build and the docs' "default" is not reliable:
+   - **Comfy-Desktop build:** actually serves on `http://127.0.0.1:8000` in
+     current versions (check your ComfyUI log for a line like
+     `To see the GUI go to: http://0.0.0.0:8000`).
+   - **Portable/CLI build:** `http://127.0.0.1:8188`.
+   Load that URL in a browser and generate a test image before going further.
+
+3. **Install the Claude Code CLI separately.** Desktop bundles the engine but
+   *not* a `claude` command on PATH — you need the CLI for the next step:
    ```powershell
    irm https://claude.ai/install.ps1 | iex
-   claude mcp add --scope user comfyui -- npx -y comfyui-mcp
    ```
-   `--scope user` matters — without it, the server is only registered for the
-   project folder you ran the command from and won't be visible when you run
-   the skill from elsewhere. If PowerShell reports `claude` not recognized
-   right after installing, the installer put it in `%USERPROFILE%\.local\bin`,
-   which isn't on PATH yet in your current session — either open a new
-   PowerShell window (the installer adds it to your user PATH), or run this
-   once in the current one:
-   ```powershell
-   & "$env:USERPROFILE\.local\bin\claude.exe" mcp add --scope user comfyui -- npx -y comfyui-mcp
-   ```
-   Set `COMFYUI_PORT` to match step 2. Verify with `claude mcp list` (should
-   show `comfyui` as connected). See
-   [`references/comfyui-mcp-setup.md`](brand-asset-machine-local/references/comfyui-mcp-setup.md)
-   for the manual `%USERPROFILE%\.claude.json` alternative if you'd rather
-   skip the CLI install.
+   If a command right after this says `claude` is not recognized, the
+   installer put it in `%USERPROFILE%\.local\bin`, which isn't on your PATH
+   until you open a **new** PowerShell window. Either open a new window, or
+   prefix the next commands with the full path:
+   `& "$env:USERPROFILE\.local\bin\claude.exe" ...`.
+
 4. **Get this repo onto the Windows filesystem, then install the skill.** If
    you've only ever used this repo from inside WSL2, it isn't visible to
-   native Windows yet — `C:\...` and `/home/...` are different filesystems.
-   Clone it fresh on Windows (don't copy across the WSL2 boundary). These
+   native Windows — `C:\...` and `/home/...` are separate filesystems. Clone
+   it fresh on Windows (don't try to copy across the WSL2 boundary). These
    commands are copy-pasteable as-is — `$env:USERPROFILE` fills in your
    username automatically, nothing to edit:
    ```powershell
@@ -132,17 +128,45 @@ without touching WSL2.
    ```powershell
    New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.claude\skills\brand-asset-machine-local" -Target "$env:USERPROFILE\BrandAssistant-Local\brand-asset-machine-local"
    ```
-   Verify it landed:
+   Verify it landed — this should print `True`:
    ```powershell
    Test-Path "$env:USERPROFILE\.claude\skills\brand-asset-machine-local\SKILL.md"
    ```
-   should print `True`.
-5. **Fully quit and reopen Claude Code Desktop** (a new chat/task in an
-   already-running Desktop isn't enough — it only watches skills directories
-   that existed when it started) **without the WSL environment picker**, so it
-   stays on the native Windows config. Or open a brand-new terminal and run
-   `claude` there. Ask it to confirm: "are you using the
-   brand-asset-machine-local skill?"
+
+5. **Add the MCP server with `--scope user` and the port from step 2.** Do
+   *not* use Desktop's Connectors settings panel for this — it only lists
+   pre-published services (GitHub, Slack, etc.) and will never find
+   `comfyui-mcp` no matter how you search:
+   ```powershell
+   claude mcp add --scope user comfyui --env COMFYUI_HOST=127.0.0.1 --env COMFYUI_PORT=8000 -- npx -y comfyui-mcp
+   ```
+   `--scope user` is not optional — the default (`local`) scope ties the
+   server to the one folder you ran the command from, and it silently
+   disappears when the skill runs from anywhere else. Verify it's live:
+   ```powershell
+   claude mcp list
+   ```
+   should show `comfyui` as connected.
+
+6. **In Claude Code Desktop, use the Code tab with the Local environment —
+   not the Home tab.** This is the step most likely to trip you up even after
+   everything above is correct. Desktop's **Home** tab runs tasks through a
+   cloud-routed "device bridge" that only proxies a specific allowlist of
+   local MCP servers back to your machine — a server you just added with
+   `claude mcp add` may simply never appear there, no matter how correctly
+   it's configured. The **Code** tab with the **Local** environment is a
+   genuinely local session: it reads `~/.claude.json` and `~/.claude/skills/`
+   directly, no proxy involved, and is what every step above assumes. Open
+   Code → Local → the `BrandAssistant-Local` folder from step 4.
+
+7. **Fully quit and reopen Claude Code Desktop** before your first attempt —
+   a new chat/task inside an already-running Desktop isn't enough, since it
+   only starts watching a skills directory that existed when the session
+   began. Then ask it directly: "are you using the brand-asset-machine-local
+   skill for this?" to confirm before you go further.
+
+**If something still doesn't connect**, see the troubleshooting table in
+[`references/comfyui-mcp-setup.md`](brand-asset-machine-local/references/comfyui-mcp-setup.md#troubleshooting).
 
 ## Usage
 

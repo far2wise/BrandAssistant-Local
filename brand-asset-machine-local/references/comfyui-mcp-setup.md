@@ -12,7 +12,10 @@ billing. This file gets that connection working.
 > in the *same* environment (all-WSL2 or all-native-Windows) — `127.0.0.1`
 > means a different machine depending on which side of that split you're on.
 > See the README's [Install](../../README.md#install) section for the two
-> supported lanes before following the steps below.
+> supported lanes, and its Windows walkthrough for the full set of
+> Windows-specific gotchas (CLI install, MCP scope, the Home-vs-Code-tab
+> trap) — this file covers the mechanics, that one covers the order to do
+> them in.
 
 ## 1. Install and run ComfyUI
 
@@ -21,10 +24,13 @@ latest version so it has native FLUX.2 and Wan 2.2 support. Also install
 **ComfyUI-Manager** for one-click custom-node and model installs.
 
 Start ComfyUI and confirm it serves its web UI and can generate a test image
-before wiring up the MCP. Default endpoints:
+before wiring up the MCP. **Don't trust a remembered default — read the port
+from the ComfyUI log every time**, it varies by build and version:
 
-- **CLI / portable build:** `http://127.0.0.1:8188`
-- **Desktop app:** `http://127.0.0.1:8000`
+- **Portable/CLI build:** typically `http://127.0.0.1:8188`.
+- **Comfy-Desktop build:** typically `http://127.0.0.1:8000`, but current
+  versions print the real answer on startup — look for a line like
+  `To see the GUI go to: http://0.0.0.0:8000` and use that port.
 
 ## 2. Install the local MCP server
 
@@ -101,7 +107,7 @@ Then fully restart Claude.
 | Variable | Purpose | Typical value |
 | --- | --- | --- |
 | `COMFYUI_HOST` | ComfyUI server address | `127.0.0.1` |
-| `COMFYUI_PORT` | ComfyUI port | `8188` (CLI) / `8000` (desktop) |
+| `COMFYUI_PORT` | ComfyUI port | `8188` (CLI) / `8000` (desktop) — but always confirm from the actual startup log, not this table |
 | `COMFYUI_PATH` | Local ComfyUI data dir (for model discovery/downloads) | `~/Documents/ComfyUI` |
 | `CIVITAI_API_TOKEN` | Only for pulling gated models from CivitAI | optional |
 
@@ -116,12 +122,26 @@ are used only for discovering and downloading models, never for generation.
 3. Query the MCP's model list and confirm the three models for the user's tier
    (`hardware-tiers.md`) are installed — fetch any missing ones.
 
-If the MCP isn't connected, do **not** attempt to generate — fix the connection
-first. Common causes: ComfyUI not started, wrong port in `COMFYUI_PORT`, Claude
-not restarted after editing the config, the server was added without
-`--scope user` so it's invisible outside the project it was added from (check
-with `claude mcp list`), or — on Windows — ComfyUI and the MCP server ended up
-split across WSL2 and native Windows (see the callout above).
+If the MCP isn't connected, do **not** attempt to generate — fix the
+connection first using the table below.
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+| --- | --- | --- |
+| `claude` not recognized in a terminal right after installing | Desktop bundles the engine but not the CLI; the installer's PATH change hasn't reached your current shell | Open a **new** terminal window, or call the full path: `& "$env:USERPROFILE\.local\bin\claude.exe" ...` (Windows) |
+| Searching Desktop's Connectors panel for `comfyui-mcp` finds nothing | Connectors only lists pre-published services (GitHub, Slack, etc.), not arbitrary local stdio servers | Add it via `claude mcp add`, not the Connectors search box |
+| `comfyui` works from one project/terminal but not another | Registered with the default `local` scope, which ties it to the one folder you ran the command from | Re-add with `--scope user`: `claude mcp add --scope user comfyui -- npx -y comfyui-mcp`; confirm with `claude mcp list` |
+| Browser can't reach `127.0.0.1:8188` even though ComfyUI is running | Wrong port assumed — Comfy-Desktop often actually serves on `8000`, not the documented default | Read the actual port from the ComfyUI startup log, not from memory |
+| Skill folder copied into `~/.claude/skills/` but Claude still says it doesn't exist | A skills directory is only watched from when the session *started* — a new chat in an already-running session doesn't re-scan it | Fully quit and reopen Claude Code (Desktop or CLI), not just a new chat/task |
+| Repo commands (`git clone`, symlink) fail to find files that "should" be there | WSL2 and native Windows are separate filesystems — a repo checked out only in WSL2 is invisible to native Windows and vice versa | Clone/copy the repo fresh on whichever side you're actually running Claude Code from |
+| `comfyui` shows connected via `claude mcp list`, but a Desktop **Home tab** task still can't see it (while another server like Blender works fine) | Home-tab/Dispatch-style tasks route through a cloud "device bridge" that only proxies a specific allowlist of local servers — a freshly-added server may not be bridged at all | Use Desktop's **Code** tab with the **Local** environment instead, pointed at the project folder — that's a genuinely local session with no bridge involved |
+| ComfyUI-Manager logs `security_level must be normal or below, and network_mode must be personal_cloud` | Manager's `network_mode` is set to `public`, which blocks some registry actions the skill relies on to auto-fetch missing models | Not urgent to fix immediately, but if model auto-fetch fails later, check Manager's settings for `network_mode` |
+| ComfyUI-Manager cache is stale / registry unreachable | `Cannot connect to comfyregistry` — outbound network issue, unrelated to the MCP connection | Fine to ignore for local generation; only affects discovering new nodes/models |
+
+Other general causes: ComfyUI not started, Claude not restarted after
+hand-editing the config file, or — on Windows — ComfyUI and the MCP server
+ended up split across WSL2 and native Windows (see the callout above).
 
 ## Alternatives
 
