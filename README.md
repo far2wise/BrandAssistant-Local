@@ -100,6 +100,13 @@ without touching WSL2.
    irm https://claude.ai/install.ps1 | iex
    claude mcp add comfyui -- npx -y comfyui-mcp
    ```
+   If PowerShell reports `claude` not recognized right after installing, the
+   installer put it in `%USERPROFILE%\.local\bin`, which isn't on PATH yet in
+   your current session — either open a new PowerShell window (the installer
+   adds it to your user PATH), or run this once in the current one:
+   ```powershell
+   & "$env:USERPROFILE\.local\bin\claude.exe" mcp add comfyui -- npx -y comfyui-mcp
+   ```
    Set `COMFYUI_PORT` to match step 2. See
    [`references/comfyui-mcp-setup.md`](brand-asset-machine-local/references/comfyui-mcp-setup.md)
    for the manual `%USERPROFILE%\.claude.json` alternative if you'd rather
