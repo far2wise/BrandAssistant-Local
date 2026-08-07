@@ -114,13 +114,19 @@ without touching WSL2.
 4. **Get this repo onto the Windows filesystem, then install the skill.** If
    you've only ever used this repo from inside WSL2, it isn't visible to
    native Windows yet — `C:\...` and `/home/...` are different filesystems.
-   Clone it fresh on Windows (don't copy across the WSL2 boundary):
+   Clone it fresh on Windows (don't copy across the WSL2 boundary). These
+   commands are copy-pasteable as-is — `$env:USERPROFILE` fills in your
+   username automatically, nothing to edit:
    ```powershell
-   git clone https://github.com/far2wise/BrandAssistant-Local.git C:\Users\<you>\BrandAssistant-Local
-   Copy-Item -Recurse "C:\Users\<you>\BrandAssistant-Local\brand-asset-machine-local" "$env:USERPROFILE\.claude\skills\brand-asset-machine-local"
+   git clone https://github.com/far2wise/BrandAssistant-Local.git "$env:USERPROFILE\BrandAssistant-Local"
+   Copy-Item -Recurse "$env:USERPROFILE\BrandAssistant-Local\brand-asset-machine-local" "$env:USERPROFILE\.claude\skills\brand-asset-machine-local"
    ```
-   Symlinks work too (`mklink /D` in an elevated prompt) if you'd rather not
-   re-copy after `git pull`. Verify it landed:
+   A symlink works too, if you'd rather not re-copy after `git pull` (run in
+   an elevated PowerShell):
+   ```powershell
+   New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.claude\skills\brand-asset-machine-local" -Target "$env:USERPROFILE\BrandAssistant-Local\brand-asset-machine-local"
+   ```
+   Verify it landed:
    ```powershell
    Test-Path "$env:USERPROFILE\.claude\skills\brand-asset-machine-local\SKILL.md"
    ```
