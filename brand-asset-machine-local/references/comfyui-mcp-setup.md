@@ -20,8 +20,11 @@ billing. This file gets that connection working.
 ## 1. Install and run ComfyUI
 
 Install ComfyUI (desktop app or the portable/CLI build) and update it to the
-latest version so it has native FLUX.2 and Wan 2.2 support. Also install
+latest version so it has native Wan 2.2 and Qwen-Image support. Also install
 **ComfyUI-Manager** for one-click custom-node and model installs.
+
+Once the MCP is connected, the skill installs everything else it needs from its
+own packs — see `models.md`. You do not need to pre-install any model by hand.
 
 Start ComfyUI and confirm it serves its web UI and can generate a test image
 before wiring up the MCP. **Don't trust a remembered default — read the port
@@ -119,8 +122,9 @@ are used only for discovering and downloading models, never for generation.
 1. ComfyUI is running and reachable at its host:port.
 2. In Claude Code run `/mcp` (or open the tools panel in Claude Desktop) and
    confirm `comfyui` shows as connected with its tools listed.
-3. Query the MCP's model list and confirm the three models for the user's tier
-   (`hardware-tiers.md`) are installed — fetch any missing ones.
+3. Install the skill's two packs with `apply_manifest` (see `models.md`), then
+   confirm their models are listed by the MCP. Pick the GGUF quant for the
+   user's VRAM first — see `hardware-tiers.md`.
 
 If the MCP isn't connected, do **not** attempt to generate — fix the
 connection first using the table below.

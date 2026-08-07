@@ -2,75 +2,90 @@
 
 **Read this every run.** The skill is hardware-agnostic on purpose: it refers to
 a PHOTO model, a LOGO model, and a MOTION model. This file maps those three jobs
-to concrete open models for the user's actual GPU. Pick the row that matches
-their VRAM, tell them the three models, confirm the models are installed
-(`references/models.md` has download details), then generate.
+to the packs this skill actually ships, for the user's actual GPU.
 
 Guiding rule: **VRAM is the ceiling.** A model that needs 24 GB will out-of-memory
 on a 12 GB card no matter how you prompt it. When in doubt, drop a tier — a
 slightly weaker model that finishes beats a better one that crashes.
 
-## Quick selection
+## The models: two packs, three jobs
 
-| GPU / VRAM tier | PHOTO (product, textures) | LOGO (text/vector) | MOTION (image→video) |
+This skill no longer picks from a loose roster of model names. It ships two
+pinned installer packs under `packs/`, both **Apache-2.0** (commercial-clean):
+
+| Job | Pack | Model |
+| --- | --- | --- |
+| **PHOTO** | `packs/photo-logo-qwen-image/` | Qwen-Image 20B distilled (GGUF) |
+| **LOGO** | `packs/photo-logo-qwen-image/` | *same model, same graph* — only the prompt changes |
+| **MOTION** | `packs/motion-wan22-i2v/` | Wan 2.2 I2V A14B, two-expert (GGUF) |
+
+PHOTO and LOGO share one pack deliberately: Qwen-Image renders readable
+typography, so a single install covers both product photography and wordmarks.
+
+Install them with `apply_manifest --path <pack>/manifest.yaml`, then enqueue the
+pack's `workflow.json`. Each `pack.yaml` records tested settings and gotchas.
+
+## ⚠️ What is actually verified
+
+**Only the 24GB+ tier has been tested.** Everything below is honest about that —
+do not present the lower rows to a user as if they were verified.
+
+| Tier | PHOTO/LOGO quant | MOTION quant | Status |
 | --- | --- | --- | --- |
-| **24 GB+ NVIDIA** (4090, 5090, A6000) | FLUX.2 [dev] (fp8) | Qwen-Image | Wan 2.2 I2V (14B, fp8) |
-| **16 GB NVIDIA** (4080, 4070 Ti Super, 4060 Ti 16G) | FLUX.1 [dev] (fp8) *or* Qwen-Image | Qwen-Image | LTX-2 (GGUF) *or* Wan 2.2 I2V (GGUF Q4) |
-| **12 GB NVIDIA** (3060 12G, 4070) | FLUX.1 [dev] GGUF Q4 *or* FLUX.1 [schnell] | Qwen-Image GGUF Q4 | LTX-Video 0.9.5 |
-| **8 GB NVIDIA** (3050, 2060, 1080) | FLUX.2 [klein] *or* SD 3.5 *or* SDXL | SD 3.5 (or Qwen-Image GGUF Q3, tight) | LTX-Video 0.9.5 (offloaded) — marginal |
-| **Apple Silicon** (M-series, unified mem) | FLUX.1 [dev]/[schnell] via MLX/GGUF (≥24 GB unified) | Qwen-Image GGUF (≥32 GB unified best) | LTX-Video 0.9.5 — slow; keep clips short |
+| **24 GB+** (4090, 5090, A6000) | Qwen-Image Distill **Q8_0** (20.3 GB) | Wan 2.2 I2V **Q4_K_S** (8.1 GB ×2) | ✅ **VERIFIED** on an RTX 5090 / 32 GB, 2026-08-06 |
+| **16 GB** | Q5_K_S | Q4_K_S | ⚠️ Untested — URLs resolve, should work |
+| **12 GB** | Q4_K_S (11.3 GB) | Q4_K_S | ⚠️ Untested — URLs resolve, expect tight fit |
+| **8 GB** | Q4_K_S + offload | marginal | ⚠️ Untested — likely needs offload tuning; may not fit |
+| **Apple Silicon** | GGUF via MLX | very slow | ⚠️ Untested by us |
 
-Notes on the "or" choices:
-- **16 GB PHOTO:** FLUX.2 [dev] can *technically* run via GGUF Q4 with text-encoder
-  CPU offload (~19 GB peak) but it's tight on 16 GB — prefer FLUX.1 [dev] fp8, or
-  Qwen-Image if you want one model for both PHOTO and LOGO.
-- **Qwen-Image doubles as PHOTO** at 16 GB+ and is Apache-2.0, so on any tier where
-  FLUX's non-commercial license is a problem (paying client), use Qwen-Image for
-  photography too. See `references/models.md` licensing.
+To change tier, uncomment the matching quant in the pack's `manifest.yaml` **and**
+update the filename in `workflow.json`'s loader node. Both must match.
 
-## Resolutions per tier
+## Verified numbers (24GB+ tier, RTX 5090 / 32 GB)
 
-Generate smaller on leaner cards; upscale after if needed (a tiled upscale pass is
-cheap compared to native high-res generation).
+Measured, not estimated — from ComfyUI's own `Prompt executed in` lines:
+
+| Asset | Resolution | Time |
+| --- | --- | --- |
+| First image of a session | 1024×1024 | **50.5 s** (includes the cold 20 GB model load) |
+| Each image after that | 1024×1024 | **14.4 s** |
+| Motion clip | 832×480, 81 frames | **102.6 s** |
+| Motion clip | 1280×720, 81 frames | **182.4 s** |
+
+Peak VRAM: ~20.9 GB (Qwen UNet) and ~8.5 GB per Wan expert. The two Wan experts
+load **sequentially**, so motion peaks at roughly one expert, not both.
+
+**Full-pack estimate on this tier:** ~22 stills ≈ 6 min of GPU time, plus ~3 min
+for one 720p clip. Comfortably under 15 minutes of compute for the whole pack.
+Budget the cold load once per session, not per asset.
+
+## Resolutions
 
 | Tier | Hero 16:9 | Hero/logo 1:1 | Motion clip |
 | --- | --- | --- | --- |
-| 24 GB+ | 1536×864 | 1024×1024 | ~5 s @ 720p, 16–24 fps |
-| 16 GB | 1536×864 | 1024×1024 | ~5 s @ 480–720p, 16 fps |
-| 12 GB | 1344×768 | 1024×1024 | ~4–5 s @ 480p, 16 fps |
-| 8 GB | 1152×648 | 896×896 | ~3–4 s @ 384–480p (expect retries) |
-| Apple Silicon | 1344×768 | 1024×1024 | short (~3 s); budget lots of time |
+| 24 GB+ (verified) | 1536×864 | **1024×1024** (verified) | **1280×720, 81 frames** (verified) |
+| 16 GB | 1536×864 | 1024×1024 | 832×480, 81 frames |
+| 12 GB | 1344×768 | 1024×1024 | 832×480, 81 frames |
+| 8 GB | 1152×648 | 896×896 | 640×384 (expect retries) |
 
-## Rough timing (for the Step 2 batch estimate)
+Wan frame counts must be **4n+1**. 81 frames @ 24 fps = 3.375 s; 121 frames
+would give ~5.0 s (untested).
 
-Give the user a realistic wait so "generate the pack" isn't a surprise. These are
-order-of-magnitude figures; a full core pack is ~15–20 stills + 1 clip.
+## Decision procedure
 
-| Tier | Per still (PHOTO/LOGO) | Per ~5 s clip (MOTION) | Full core pack (approx) |
-| --- | --- | --- | --- |
-| 24 GB+ (4090/5090) | ~15–25 s | ~3–5 min | well under 1 hour |
-| 16 GB | ~30–50 s | ~6–10 min | ~1–1.5 hours |
-| 12 GB | ~60–90 s | ~10–15 min (LTX faster) | ~2 hours |
-| 8 GB | ~2–4 min | marginal; may skip | half a day — consider images only |
-| Apple Silicon | ~2–5 min | very slow | plan for overnight |
-
-If the user is on 8 GB or Apple Silicon and wants the motion loop, warn them it's
-the heaviest step and offer to deliver images first, video as a follow-up batch.
-
-## Decision procedure (what to actually do)
-
-1. Ask VRAM (or detect: `nvidia-smi` on NVIDIA; Apple → unified memory size).
-2. Pick the tier row above. If they're between tiers or unsure, choose the lower one.
-3. Name the three models to the user and confirm each is present in ComfyUI
-   (query the MCP's model list). Offer to fetch any that are missing.
-4. Use that tier's resolutions and quote its timing in the Step 2 estimate.
-5. If a generation OOMs mid-run: drop one resolution step, enable model/text-encoder
-   offload, or fall back to that tier's lighter "or" option — then continue.
+1. Run the MCP health check (`get_system_stats` action `health`) — it reports GPU
+   and free VRAM in one call.
+2. Pick the tier row. If between tiers or unsure, choose the lower one.
+3. Tell the user plainly which tier they're on and — if it isn't 24GB+ — that the
+   quant swap is untested and may need adjusting.
+4. Install both packs, then quote the timings above (24GB+) or warn that timings
+   on their tier are unmeasured.
+5. If a generation OOMs: drop one resolution step, drop to a smaller GGUF quant
+   (remember to update `workflow.json` too), then continue.
 
 ## If VRAM is unknown or very low
 
-- **No dedicated GPU / <6 GB:** local generation isn't realistic. Tell the user
-  honestly; suggest either the cloud version of this skill (Higgsfield/Comfy Cloud)
-  or renting a GPU (e.g. a rented 4090) and pointing the MCP at that ComfyUI.
-- **Unsure:** default to the **12 GB** tier — it runs on the widest range of cards
-  and degrades gracefully.
+- **No dedicated GPU / <6 GB:** local generation isn't realistic. Say so honestly;
+  suggest renting a GPU and pointing the MCP at that ComfyUI.
+- **Unsure:** default to the **12 GB** tier — widest compatibility, degrades
+  gracefully — and tell the user it is unverified.

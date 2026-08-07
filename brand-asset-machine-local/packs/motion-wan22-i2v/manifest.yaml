@@ -1,0 +1,58 @@
+# MOTION — Wan 2.2 I2V A14B (Apache-2.0) install manifest.
+# Consumable by the comfyui-mcp `apply_manifest` tool:
+#   apply_manifest --path brand-asset-machine-local/packs/motion-wan22-i2v/manifest.yaml
+#
+# Adapted from the bundled comfyui-mcp `wan-longer-videos-i2v` pack manifest.
+# That pack's graph chains FIVE image-to-video segments to build a long video;
+# this skill needs ONE ~3-5s hero loop, so our workflow.json is a single-segment
+# slice. The model set is unchanged (a segment uses the same two experts).
+#
+# Mirror base: https://huggingface.co/Aitrepreneur/FLX/resolve/main
+# LoRA source:  https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged
+# Licence: Apache-2.0 (commercial use clean) — see references/models.md.
+#
+# NOTE on the upstream file: its comment block says "UNets (GGUF, Q8_0 tier)"
+# but the URLs beneath it are Q4_K_S. The URLs are what apply_manifest acts on,
+# so the upstream pack installs Q4_K_S. We keep Q4_K_S (it is what we tested)
+# and label it honestly.
+
+pip: []
+
+custom_nodes:
+  # Required by our workflow.json:
+  - https://github.com/city96/ComfyUI-GGUF                    # UnetLoaderGGUF / CLIPLoaderGGUF
+  - https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite   # VHS_VideoCombine (mp4 encode)
+  # NOT required by our single-segment slice — the upstream monolith needs these
+  # for RIFE interpolation, rgthree widgets and multi-segment batching:
+  # - https://github.com/Fannovel16/ComfyUI-Frame-Interpolation
+  # - https://github.com/rgthree/rgthree-comfy
+  # - https://github.com/kijai/ComfyUI-KJNodes
+  # - https://github.com/yolain/ComfyUI-Easy-Use
+
+models:
+  # --- Text encoder (GGUF) ---
+  - url: https://huggingface.co/Aitrepreneur/FLX/resolve/main/umt5-xxl-encoder-Q5_K_S.gguf
+    local_path: text_encoders/umt5-xxl-encoder-Q5_K_S.gguf
+
+  # --- VAE ---
+  - url: https://huggingface.co/Aitrepreneur/FLX/resolve/main/wan_2.1_vae.safetensors
+    local_path: vae/wan_2.1_vae.safetensors
+
+  # --- UNets: the two Wan 2.2 MoE experts (high-noise then low-noise) ---
+  # Q4_K_S tier active — TESTED on 24GB+ (RTX 5090). 8.1 GB each.
+  - url: https://huggingface.co/Aitrepreneur/FLX/resolve/main/Wan2.2-I2V-A14B-HighNoise-Q4_K_S.gguf
+    local_path: unet/Wan2.2-I2V-A14B-HighNoise-Q4_K_S.gguf
+  - url: https://huggingface.co/Aitrepreneur/FLX/resolve/main/Wan2.2-I2V-A14B-LowNoise-Q4_K_S.gguf
+    local_path: unet/Wan2.2-I2V-A14B-LowNoise-Q4_K_S.gguf
+  # Q8_0 quality upgrade — URLs verified to resolve (14.3 GB each), UNTESTED by us.
+  # The experts load sequentially, so peak VRAM is ~one expert, not both.
+  # - url: https://huggingface.co/Aitrepreneur/FLX/resolve/main/Wan2.2-I2V-A14B-HighNoise-Q8_0.gguf
+  #   local_path: unet/Wan2.2-I2V-A14B-HighNoise-Q8_0.gguf
+  # - url: https://huggingface.co/Aitrepreneur/FLX/resolve/main/Wan2.2-I2V-A14B-LowNoise-Q8_0.gguf
+  #   local_path: unet/Wan2.2-I2V-A14B-LowNoise-Q8_0.gguf
+
+  # --- Lightning 4-step LoRAs (one per expert) ---
+  - url: https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/loras/wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors
+    local_path: loras/wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors
+  - url: https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/loras/wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors
+    local_path: loras/wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors

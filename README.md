@@ -35,23 +35,37 @@ palette held across every asset, and motion/texture templates never have.
 - Claude Code (CLI or Desktop app) to run the skill and the MCP. See
   [Install](#install) below for the Linux/WSL2 vs. Windows-native path.
 
-## Model tiers at a glance
+## Models and tiers at a glance
 
-The skill picks models to fit **your** GPU. Full detail (resolutions, timings,
-fallbacks) is in [`brand-asset-machine-local/references/hardware-tiers.md`](brand-asset-machine-local/references/hardware-tiers.md).
+The skill ships **two pinned installer packs** under
+[`brand-asset-machine-local/packs/`](brand-asset-machine-local/packs/) — one
+`apply_manifest` call each, no registry hunting. Photography and logos share a
+model, because Qwen-Image renders readable typography.
 
-| VRAM | Photography | Logo / text | Motion (image→video) |
+| Job | Pack | Model | Licence |
 | --- | --- | --- | --- |
-| 24 GB+ | FLUX.2 [dev] | Qwen-Image | Wan 2.2 I2V |
-| 16 GB | FLUX.1 [dev] / Qwen-Image | Qwen-Image | LTX-2 / Wan 2.2 (GGUF) |
-| 12 GB | FLUX.1 [dev] GGUF | Qwen-Image GGUF | LTX-Video 0.9.5 |
-| 8 GB | FLUX.2 [klein] / SD 3.5 | SD 3.5 | LTX-Video 0.9.5 (marginal) |
-| Apple Silicon | FLUX via MLX/GGUF | Qwen-Image GGUF | LTX-Video 0.9.5 (slow) |
+| Photography + Logo/text | `photo-logo-qwen-image` | Qwen-Image 20B distilled (GGUF) | Apache-2.0 |
+| Motion (image→video) | `motion-wan22-i2v` | Wan 2.2 I2V A14B, two-expert (GGUF) | Apache-2.0 |
+
+Swap the GGUF quant to fit your card:
+
+| VRAM | Photo/logo quant | Motion quant | Status |
+| --- | --- | --- | --- |
+| 24 GB+ | Q8_0 | Q4_K_S | ✅ **Verified** on an RTX 5090 |
+| 16 GB | Q5_K_S | Q4_K_S | ⚠️ Untested |
+| 12 GB | Q4_K_S | Q4_K_S | ⚠️ Untested |
+| 8 GB / Apple Silicon | Q4_K_S + offload | marginal | ⚠️ Untested |
+
+Verified timings on the 24 GB+ tier: **14.4 s** per 1024×1024 still (after a
+50 s cold model load) and **182 s** for a 1280×720, 81-frame clip. Full detail —
+resolutions, VRAM peaks, install gotchas — in
+[`references/hardware-tiers.md`](brand-asset-machine-local/references/hardware-tiers.md).
 
 > **Licensing:** the skill files here are MIT, but the **models are not** — each
-> keeps its own license. FLUX `[dev]` weights are historically non-commercial;
-> for guaranteed-commercial output use the all-Apache-2.0 stack (Qwen-Image +
-> Wan 2.2). Details in [`references/models.md`](brand-asset-machine-local/references/models.md).
+> keeps its own license. This skill deliberately ships an **all-Apache-2.0** stack
+> (Qwen-Image + Wan 2.2), so output is clean for commercial and client work. FLUX
+> and LTX are *not* used, precisely to avoid their licence caveats. Details in
+> [`references/models.md`](brand-asset-machine-local/references/models.md).
 
 ## Install
 
@@ -187,9 +201,18 @@ BrandAssistant-Local/
 ├── LICENSE                         (MIT — covers the skill files, not the models)
 └── brand-asset-machine-local/      (the installable skill)
     ├── SKILL.md
+    ├── packs/                      (pinned, tested ComfyUI installer packs)
+    │   ├── photo-logo-qwen-image/  (PHOTO + LOGO — Qwen-Image, Apache-2.0)
+    │   │   ├── pack.yaml           (tested settings, gotchas, what's unverified)
+    │   │   ├── manifest.yaml       (apply_manifest input: nodes + weights)
+    │   │   └── workflow.json       (ready API-format graph to enqueue)
+    │   └── motion-wan22-i2v/       (MOTION — Wan 2.2 I2V, Apache-2.0)
+    │       ├── pack.yaml
+    │       ├── manifest.yaml
+    │       └── workflow.json
     └── references/
-        ├── hardware-tiers.md       (VRAM cheat sheet — model picks per GPU)
-        ├── models.md               (downloads, folders, licensing)
+        ├── hardware-tiers.md       (VRAM cheat sheet — quant picks per GPU)
+        ├── models.md               (what's installed, folders, licensing)
         ├── comfyui-mcp-setup.md    (ComfyUI + local MCP install/config)
         └── consistency.md          (locking the hero product's look)
 ```

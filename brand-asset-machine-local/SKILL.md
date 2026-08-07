@@ -34,18 +34,32 @@ never have. Consistency and palette discipline matter more than raw model power.
 
 Do these first, in order. Skipping them is the most common way this fails.
 
-1. **Confirm the MCP is live.** A ComfyUI MCP server must be connected and its
-   ComfyUI running (default `http://127.0.0.1:8188`). Verify by listing the MCP
-   tools or querying available models. If it isn't connected, stop and walk the
-   user through `references/comfyui-mcp-setup.md` — do not try to generate
+1. **Confirm the MCP is live and check the hardware.** A ComfyUI MCP server must
+   be connected with its ComfyUI running. Run the MCP's health check
+   (`get_system_stats` action `health`) — one call confirms reachability AND
+   reports GPU / free VRAM / queue depth. If it isn't connected, stop and walk
+   the user through `references/comfyui-mcp-setup.md` — do not try to generate
    without it.
 
-2. **Match models to the user's hardware.** Ask what GPU / VRAM they have (or
-   detect it), then read `references/hardware-tiers.md` and pick the model set
-   for their tier. This is mandatory: a 12 GB card cannot run the 24 GB tier's
-   models and will out-of-memory. Tell the user which three models you'll use
-   (photography, logo/text, motion) and confirm the models are actually present
-   in their ComfyUI (offer to fetch missing ones — see `references/models.md`).
+2. **Install the two packs.** This skill ships its own installer packs under
+   `packs/` — pinned, licence-vetted, and tested. Do **not** hand-build graphs or
+   go hunting through ComfyUI-Manager's registry. Apply each manifest:
+
+   ```
+   apply_manifest --path brand-asset-machine-local/packs/photo-logo-qwen-image/manifest.yaml
+   apply_manifest --path brand-asset-machine-local/packs/motion-wan22-i2v/manifest.yaml
+   ```
+
+   - **PHOTO + LOGO** → `packs/photo-logo-qwen-image/` (Qwen-Image, Apache-2.0).
+     One model does both jobs — photography *and* readable wordmarks.
+   - **MOTION** → `packs/motion-wan22-i2v/` (Wan 2.2 I2V, Apache-2.0).
+
+   Each pack's `workflow.json` is a ready API-format graph: enqueue it directly
+   with `enqueue_workflow`, overriding the prompt/seed/size per asset. Read the
+   pack's `pack.yaml` before you run it — it records the tested settings, what is
+   **not** yet verified, and the install gotchas (custom-node placement, skipped
+   pip deps, and a misleading "model NOT VISIBLE" warning). Only the 24GB+ tier
+   is verified today; see `references/hardware-tiers.md` before promising more.
 
 3. **Pick a consistency method.** The brand's hero product must look identical
    across every shot, and no local model gives that for free. Read

@@ -1,0 +1,99 @@
+name: photo-logo-qwen-image
+display_name: PHOTO + LOGO — Qwen-Image (GGUF)
+family: qwen
+kind: txt2img
+description: >-
+  The PHOTO and LOGO half of the Brand Asset Machine. Qwen-Image 20B (distilled,
+  GGUF) with the Qwen2.5-VL 7B text encoder and the 8-step Lightning LoRA. One
+  model covers both jobs: product photography AND readable typographic wordmarks.
+runtime: local
+licence: Apache-2.0 (commercial use clean)
+
+# --- What we actually tested, on what ---
+tested:
+  status: VERIFIED end-to-end (real images generated, not just installed)
+  date: 2026-08-06
+  gpu: NVIDIA GeForce RTX 5090, 32 GB VRAM (the 24GB+ tier)
+  comfyui: 0.30.0 / Python 3.12.11 / PyTorch 2.10.0+cu130
+  quant: Qwen_Image_Distill-Q8_0.gguf (20.3 GB)
+  results:
+    - >-
+      PHOTO: 1024x1024 product still. 50.5 s for the FIRST run (cold 20 GB model
+      load); 14.4 s per image after that, with the model cached. Budget the cold
+      load once per session, not per asset.
+    - >-
+      LOGO: 1024x1024 wordmark, the requested word rendered correctly spelled and
+      legible in a clean geometric sans on flat white — the thing SDXL cannot do.
+  vram_headroom: >-
+    Comfortable. Peak ~20.9 GB for the UNet + 7.5 GB text encoder, loaded in
+    sequence; no OOM and no offload tuning needed on 32 GB.
+
+untested:
+  - >-
+    Lower-VRAM tiers (16GB / 12GB / 8GB). The Q5_K_S and Q4_K_S GGUF URLs in
+    manifest.yaml were confirmed to RESOLVE (HTTP 200, 11.3 GB for Q4_K_S) but we
+    did NOT run them. Treat those tiers as "should work", not "verified".
+  - Resolutions other than 1024x1024.
+  - The 4-step Lightning LoRA variant (we shipped and tested the 8-step).
+
+# --- Settings baked into workflow.json (inherited from the tested upstream graph) ---
+settings:
+  sampler: euler
+  scheduler: simple
+  steps: 8          # must match the Lightning LoRA (8-step); use 4 with the 4-step LoRA
+  cfg: 1.0          # Lightning/distilled models want cfg 1.0, NOT 7-8
+  latent: EmptySD3LatentImage
+  clip_type: qwen_image
+
+usage:
+  photo: >-
+    Describe the scene normally. Do NOT ask for text in the image — keep the
+    product unlabelled and let the logo pack carry the mark.
+  logo: >-
+    Same graph, same models. Put the exact wordmark in double quotes in the
+    prompt, e.g. a logo that reads "HUSH" in a geometric sans-serif. Generate on
+    flat white, then background-remove for the transparent PNG.
+
+# --- Provenance and the fix-ups we had to make ---
+adapted_from: >-
+  The comfyui-mcp bundled `qwen-image` pack (manifest) and `qwen-image-edit` pack
+  (graph). Contents were COPIED into this repo — the bundled packs live under an
+  npx cache path that changes between invocations and must never be referenced.
+manual_fixups:
+  - >-
+    The bundled `qwen-image` pack has NO workflow (pack.yaml sets `workflow: null`),
+    so the graph here was rebuilt from the `qwen-image-edit` graph with the
+    edit-specific nodes removed: TextEncodeQwenImageEdit -> plain CLIPTextEncode,
+    and ReferenceLatent / LoadImage / ImageStitch / ImageScaleToTotalPixels /
+    VAEEncode dropped so the latent comes from EmptySD3LatentImage instead.
+  - >-
+    Dropped the upstream WAN-2.2 "combo refine" second stage and the post-process
+    chain (UltimateSDUpscale / FastFilmGrain / FastLaplacianSharpen) — not needed
+    for brand stills, and each one added custom-node dependencies.
+  - >-
+    Replaced rgthree's "Power Lora Loader" with core LoraLoaderModelOnly. This
+    drops FOUR custom-node dependencies; ComfyUI-GGUF is now the only one required.
+known_gotchas:
+  - >-
+    NO mmproj FILE — TEXT-TO-IMAGE ONLY. On load, ComfyUI-GGUF logs:
+    "Can't find mmproj file for 'Qwen2.5-VL-7B-Instruct-UD-Q4_K_S.gguf' ...
+    Qwen-Image-Edit will be broken!" followed by a long "clip missing: visual.*"
+    list. That is EXPECTED and HARMLESS for this pack: txt2img only needs the
+    text half of Qwen2.5-VL, and our verified PHOTO and LOGO runs came out clean.
+    But it means the VISION half is absent, so **Qwen-Image-Edit will not work**
+    until you also install a matching mmproj file. This matters because
+    references/consistency.md recommends Qwen-Image-Edit for small fixes
+    (recolouring a label, swapping a background) — that path is NOT installed by
+    this manifest and is NOT tested.
+  - >-
+    apply_manifest clones custom nodes into <ComfyUI install>/custom_nodes, but a
+    Comfy-Desktop install launched with --base-directory loads them from
+    <base-directory>/custom_nodes. If nodes do not appear after install, move them
+    there and restart. It also skips pip deps ("Python dependencies were NOT
+    installed") — install each node's requirements.txt into ComfyUI's own venv.
+  - >-
+    ComfyUI's REST /models endpoint does NOT list .gguf files under text_encoders,
+    so the MCP may warn "NOT VISIBLE to the connected ComfyUI" for a file that is
+    perfectly usable. Confirm with the loader node's own enum
+    (create_workflow action:"node_info" node_type:CLIPLoaderGGUF verbose:true)
+    rather than trusting that warning.

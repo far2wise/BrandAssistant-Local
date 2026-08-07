@@ -1,0 +1,144 @@
+{
+  "1": {
+    "class_type": "UnetLoaderGGUF",
+    "inputs": { "unet_name": "Wan2.2-I2V-A14B-HighNoise-Q4_K_S.gguf" },
+    "_meta": { "title": "Wan 2.2 I2V A14B — HIGH noise expert" }
+  },
+  "2": {
+    "class_type": "LoraLoaderModelOnly",
+    "inputs": {
+      "lora_name": "wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors",
+      "strength_model": 1.0,
+      "model": ["1", 0]
+    },
+    "_meta": { "title": "Lightning 4-step LoRA (high noise)" }
+  },
+  "3": {
+    "class_type": "ModelSamplingSD3",
+    "inputs": { "shift": 5.0, "model": ["2", 0] },
+    "_meta": { "title": "Shift 5.0 (high)" }
+  },
+  "4": {
+    "class_type": "UnetLoaderGGUF",
+    "inputs": { "unet_name": "Wan2.2-I2V-A14B-LowNoise-Q4_K_S.gguf" },
+    "_meta": { "title": "Wan 2.2 I2V A14B — LOW noise expert" }
+  },
+  "5": {
+    "class_type": "LoraLoaderModelOnly",
+    "inputs": {
+      "lora_name": "wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors",
+      "strength_model": 1.0,
+      "model": ["4", 0]
+    },
+    "_meta": { "title": "Lightning 4-step LoRA (low noise)" }
+  },
+  "6": {
+    "class_type": "ModelSamplingSD3",
+    "inputs": { "shift": 5.0, "model": ["5", 0] },
+    "_meta": { "title": "Shift 5.0 (low)" }
+  },
+  "7": {
+    "class_type": "CLIPLoaderGGUF",
+    "inputs": { "clip_name": "umt5-xxl-encoder-Q5_K_S.gguf", "type": "wan" },
+    "_meta": { "title": "umt5-xxl text encoder (GGUF)" }
+  },
+  "8": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "slow motion cream swirling into dark cold brew coffee in a clear glass, gentle liquid motion, bright soft studio light, locked-off camera",
+      "clip": ["7", 0]
+    },
+    "_meta": { "title": "Positive prompt" }
+  },
+  "9": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "blurry, low quality, distorted, watermark, text, fast camera movement, jitter",
+      "clip": ["7", 0]
+    },
+    "_meta": { "title": "Negative prompt" }
+  },
+  "10": {
+    "class_type": "VAELoader",
+    "inputs": { "vae_name": "wan_2.1_vae.safetensors" },
+    "_meta": { "title": "Wan 2.1 VAE" }
+  },
+  "11": {
+    "class_type": "LoadImage",
+    "inputs": { "image": "start_frame.png", "upload": "image" },
+    "_meta": { "title": "Start frame (a PHOTO-pack still)" }
+  },
+  "12": {
+    "class_type": "WanImageToVideo",
+    "inputs": {
+      "positive": ["8", 0],
+      "negative": ["9", 0],
+      "vae": ["10", 0],
+      "width": 1280,
+      "height": 720,
+      "length": 81,
+      "batch_size": 1,
+      "start_image": ["11", 0]
+    },
+    "_meta": { "title": "I2V conditioning — 81 frames @ 24fps = 3.4s" }
+  },
+  "13": {
+    "class_type": "KSamplerAdvanced",
+    "inputs": {
+      "add_noise": "enable",
+      "noise_seed": 70707,
+      "steps": 4,
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "start_at_step": 0,
+      "end_at_step": 2,
+      "return_with_leftover_noise": "enable",
+      "model": ["3", 0],
+      "positive": ["12", 0],
+      "negative": ["12", 1],
+      "latent_image": ["12", 2]
+    },
+    "_meta": { "title": "Pass 1 — high-noise expert (steps 0-2)" }
+  },
+  "14": {
+    "class_type": "KSamplerAdvanced",
+    "inputs": {
+      "add_noise": "disable",
+      "noise_seed": 70707,
+      "steps": 4,
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "start_at_step": 2,
+      "end_at_step": 4,
+      "return_with_leftover_noise": "disable",
+      "model": ["6", 0],
+      "positive": ["12", 0],
+      "negative": ["12", 1],
+      "latent_image": ["13", 0]
+    },
+    "_meta": { "title": "Pass 2 — low-noise expert (steps 2-4)" }
+  },
+  "15": {
+    "class_type": "VAEDecode",
+    "inputs": { "samples": ["14", 0], "vae": ["10", 0] },
+    "_meta": { "title": "Decode" }
+  },
+  "16": {
+    "class_type": "VHS_VideoCombine",
+    "inputs": {
+      "images": ["15", 0],
+      "frame_rate": 24,
+      "loop_count": 0,
+      "filename_prefix": "brand/motion",
+      "format": "video/h264-mp4",
+      "pingpong": false,
+      "save_output": true,
+      "pix_fmt": "yuv420p",
+      "crf": 19,
+      "save_metadata": true
+    },
+    "_meta": { "title": "Encode mp4 (pingpong=true for a seamless loop)" }
+  }
+}
