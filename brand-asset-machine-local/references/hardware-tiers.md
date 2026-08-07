@@ -18,6 +18,7 @@ pinned installer packs under `packs/`, both **Apache-2.0** (commercial-clean):
 | **PHOTO** | `packs/photo-logo-qwen-image/` | Qwen-Image 20B distilled (GGUF) |
 | **LOGO** | `packs/photo-logo-qwen-image/` | *same model, same graph* — only the prompt changes |
 | **MOTION** | `packs/motion-wan22-i2v/` | Wan 2.2 I2V A14B, two-expert (GGUF) |
+| **EDIT** *(optional)* | `packs/edit-qwen-image/` | Qwen-Image-**Edit** (GGUF) + mmproj projector |
 
 PHOTO and LOGO share one pack deliberately: Qwen-Image renders readable
 typography, so a single install covers both product photography and wordmarks.
@@ -30,13 +31,13 @@ pack's `workflow.json`. Each `pack.yaml` records tested settings and gotchas.
 **Only the 24GB+ tier has been tested.** Everything below is honest about that —
 do not present the lower rows to a user as if they were verified.
 
-| Tier | PHOTO/LOGO quant | MOTION quant | Status |
-| --- | --- | --- | --- |
-| **24 GB+** (4090, 5090, A6000) | Qwen-Image Distill **Q8_0** (20.3 GB) | Wan 2.2 I2V **Q4_K_S** (8.1 GB ×2) | ✅ **VERIFIED** on an RTX 5090 / 32 GB, 2026-08-06 |
-| **16 GB** | Q5_K_S | Q4_K_S | ⚠️ Untested — URLs resolve, should work |
-| **12 GB** | Q4_K_S (11.3 GB) | Q4_K_S | ⚠️ Untested — URLs resolve, expect tight fit |
-| **8 GB** | Q4_K_S + offload | marginal | ⚠️ Untested — likely needs offload tuning; may not fit |
-| **Apple Silicon** | GGUF via MLX | very slow | ⚠️ Untested by us |
+| Tier | PHOTO/LOGO quant | MOTION quant | EDIT quant | Status |
+| --- | --- | --- | --- | --- |
+| **24 GB+** (4090, 5090, A6000) | Qwen-Image Distill **Q8_0** (20.3 GB) | Wan 2.2 I2V **Q4_K_S** (8.1 GB ×2) | Qwen-Image-Edit **Q8_0** (20.3 GB) | ✅ **VERIFIED** on an RTX 5090 / 32 GB |
+| **16 GB** | Q5_K_S | Q4_K_S | Q5_K_S | ⚠️ Untested — URLs resolve, should work |
+| **12 GB** | Q4_K_S (11.3 GB) | Q4_K_S | Q4_K_S (11.3 GB) | ⚠️ Untested — URLs resolve, expect tight fit |
+| **8 GB** | Q4_K_S + offload | marginal | Q4_K_S + offload | ⚠️ Untested — likely needs offload tuning; may not fit |
+| **Apple Silicon** | GGUF via MLX | very slow | GGUF via MLX | ⚠️ Untested by us |
 
 To change tier, uncomment the matching quant in the pack's `manifest.yaml` **and**
 update the filename in `workflow.json`'s loader node. Both must match.
@@ -51,6 +52,7 @@ Measured, not estimated — from ComfyUI's own `Prompt executed in` lines:
 | Each image after that | 1024×1024 | **14.4 s** |
 | Motion clip | 832×480, 81 frames | **102.6 s** |
 | Motion clip | 1280×720, 81 frames | **182.4 s** |
+| Targeted edit (optional pack) | ~1 megapixel | **47.9 s** (includes its own cold 20 GB load) |
 
 Peak VRAM: ~20.9 GB (Qwen UNet) and ~8.5 GB per Wan expert. The two Wan experts
 load **sequentially**, so motion peaks at roughly one expert, not both.

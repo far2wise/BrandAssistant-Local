@@ -53,6 +53,10 @@ Do these first, in order. Skipping them is the most common way this fails.
    - **PHOTO + LOGO** → `packs/photo-logo-qwen-image/` (Qwen-Image, Apache-2.0).
      One model does both jobs — photography *and* readable wordmarks.
    - **MOTION** → `packs/motion-wan22-i2v/` (Wan 2.2 I2V, Apache-2.0).
+   - **EDIT (optional)** → `packs/edit-qwen-image/` (Qwen-Image-Edit, Apache-2.0).
+     Only if the user wants touch-ups (recolour a label, swap a background)
+     rather than re-rolling a shot — see `references/consistency.md`. Adds
+     ~21.5 GB, so offer it, don't install it by reflex.
 
    Each pack's `workflow.json` is a ready API-format graph: enqueue it directly
    with `enqueue_workflow`, overriding the prompt/seed/size per asset. Read the

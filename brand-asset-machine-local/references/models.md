@@ -10,7 +10,11 @@ Install with the MCP's `apply_manifest`:
 ```
 apply_manifest --path brand-asset-machine-local/packs/photo-logo-qwen-image/manifest.yaml
 apply_manifest --path brand-asset-machine-local/packs/motion-wan22-i2v/manifest.yaml
+apply_manifest --path brand-asset-machine-local/packs/edit-qwen-image/manifest.yaml   # optional
 ```
+
+The first two are the core pack. The third is optional — install it only if you
+want the touch-up path (`consistency.md`), since it adds ~21.5 GB.
 
 Do **not** hand-build graphs or hunt through the ComfyUI-Manager registry — the
 packs exist precisely so that stops being necessary.
@@ -32,12 +36,39 @@ Custom node required: **ComfyUI-GGUF** only.
 **Transparent logos:** generate the mark on flat white, then background-remove to
 produce the alpha PNG. Deliver both versions.
 
-**⚠️ Text-to-image only — no mmproj.** The manifest installs the *text* half of
+**Text-to-image only — no mmproj.** This manifest installs the *text* half of
 Qwen2.5-VL. On load you will see `Can't find mmproj file ... Qwen-Image-Edit will
 be broken!` and a long `clip missing: visual.*` list. This is **expected and
-harmless for txt2img** (verified: clean photo and logo output). But it means
-**Qwen-Image-Edit is not available** unless you additionally install a matching
-mmproj file. See the caveat under `consistency.md` guidance below.
+harmless for txt2img** (verified: clean photo and logo output). Editing lives in
+its own pack — see below.
+
+## EDIT — `packs/edit-qwen-image/`
+
+Targeted touch-ups to an existing asset (recolour a label to the palette, swap a
+background) instead of re-rolling a generation that drifts off-model.
+
+| File | ComfyUI folder | Size (Q8_0) |
+| --- | --- | --- |
+| `Qwen_Image_Edit-Q8_0.gguf` | `models/unet/` | 20.3 GB |
+| `Qwen2.5-VL-7B-Instruct-mmproj-BF16.gguf` | `models/text_encoders/` | 1.3 GB |
+
+Custom node required: **ComfyUI-GGUF** only. Reuses the photo pack's encoder,
+VAE and Lightning LoRA.
+
+**Two things are required, and missing either one breaks editing:**
+
+1. **The mmproj vision projector** — completes Qwen2.5-VL's vision half.
+   ComfyUI-GGUF pairs it **by filename, in the same directory**: it strips the
+   encoder's quant suffix and scans `models/text_encoders/` for a `.gguf`
+   containing both `mmproj` and that stem. Keep the upstream filename and put it
+   beside the encoder, or it silently stays broken. One BF16 mmproj serves every
+   quant of the encoder.
+2. **The Qwen-Image-Edit UNet** — a *different model* from `Qwen_Image_Distill`.
+   Installing the mmproj alone only silences the warning; it does not enable edits.
+
+Verified 2026-08-07: the log flipped from `Can't find mmproj file ... will be
+broken!` to `Using mmproj 'Qwen2.5-VL-7B-Instruct-mmproj-BF16.gguf' ...`, and a
+cap-recolour edit changed 0.98% of pixels, concentrated in the cap band.
 
 ## MOTION — `packs/motion-wan22-i2v/`
 

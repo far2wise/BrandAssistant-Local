@@ -61,11 +61,13 @@ block at the top of every prompt, changing only the scene.
 - **Textures and atmosphere overlays** don't need the hero-product lock; generate
   them on plain black/white so they composite cleanly, and just hold the palette.
 - **Editing beats regenerating** for small fixes (recolour a label to the palette,
-  swap a background): use **Qwen-Image-Edit** rather than rolling the dice on a
-  fresh generation that may drift off-model.
-  **⚠️ Not installed by default.** `packs/photo-logo-qwen-image/` installs only the
-  *text* half of Qwen2.5-VL (no `mmproj` file), which is all txt2img needs. Loading
-  it logs `Qwen-Image-Edit will be broken!` — harmless for generation, but the edit
-  path genuinely will not work until you install a matching mmproj file and the
-  Qwen-Image-Edit UNet. Untested by this skill. If you need edits today, prefer
-  Method B (reference conditioning) and regenerate.
+  swap a background, change a cap): use **Qwen-Image-Edit** rather than rolling the
+  dice on a fresh generation that may drift off-model. Install
+  **`packs/edit-qwen-image/`** — it is a separate pack because it needs two things
+  the photo pack does not ship: the `mmproj` vision projector (completes
+  Qwen2.5-VL's vision half) and the Qwen-Image-**Edit** UNet, which is a different
+  model from the txt2img one. Verified: a cap recolour changed 0.98% of pixels,
+  concentrated in the cap band, leaving the product and background intact.
+  **Prompt it with both halves** — name the change *and* what must stay:
+  "change X, keep everything else exactly the same". Instructions that only name
+  the change tend to re-render more of the frame than you wanted.

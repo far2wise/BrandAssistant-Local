@@ -46,6 +46,7 @@ model, because Qwen-Image renders readable typography.
 | --- | --- | --- | --- |
 | Photography + Logo/text | `photo-logo-qwen-image` | Qwen-Image 20B distilled (GGUF) | Apache-2.0 |
 | Motion (image→video) | `motion-wan22-i2v` | Wan 2.2 I2V A14B, two-expert (GGUF) | Apache-2.0 |
+| Targeted edits *(optional)* | `edit-qwen-image` | Qwen-Image-Edit (GGUF) + mmproj | Apache-2.0 |
 
 Swap the GGUF quant to fit your card:
 
@@ -206,7 +207,11 @@ BrandAssistant-Local/
     │   │   ├── pack.yaml           (tested settings, gotchas, what's unverified)
     │   │   ├── manifest.yaml       (apply_manifest input: nodes + weights)
     │   │   └── workflow.json       (ready API-format graph to enqueue)
-    │   └── motion-wan22-i2v/       (MOTION — Wan 2.2 I2V, Apache-2.0)
+    │   ├── motion-wan22-i2v/       (MOTION — Wan 2.2 I2V, Apache-2.0)
+    │   │   ├── pack.yaml
+    │   │   ├── manifest.yaml
+    │   │   └── workflow.json
+    │   └── edit-qwen-image/        (EDIT, optional — Qwen-Image-Edit + mmproj)
     │       ├── pack.yaml
     │       ├── manifest.yaml
     │       └── workflow.json

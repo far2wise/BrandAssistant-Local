@@ -1,0 +1,57 @@
+# EDIT — Qwen-Image-Edit (Apache-2.0) install manifest.
+# Consumable by the comfyui-mcp `apply_manifest` tool:
+#   apply_manifest --path brand-asset-machine-local/packs/edit-qwen-image/manifest.yaml
+#
+# Adapted from the bundled comfyui-mcp `qwen-image-edit` pack manifest, trimmed
+# to the plain single-image edit path (the upstream pack also ships a
+# super-inpainting workflow we do not use).
+#
+# This is an ADD-ON to packs/photo-logo-qwen-image. It is listed standalone below
+# so it can be applied on its own — apply_manifest skips files already present,
+# so applying both packs downloads the shared VAE / encoder / LoRA only once.
+#
+# TWO things are needed to make editing work, and missing either one breaks it:
+#   1. the mmproj vision projector (completes Qwen2.5-VL's vision half), and
+#   2. the Qwen-Image-EDIT UNet, which is a DIFFERENT model from the
+#      Qwen_Image_Distill txt2img UNet the photo pack installs.
+#
+# Mirror base: https://huggingface.co/Aitrepreneur/FLX/resolve/main
+# Licence: Apache-2.0 (commercial use clean) — see references/models.md.
+
+pip: []
+
+custom_nodes:
+  # Already installed by photo-logo-qwen-image; repeated so this pack stands alone.
+  - https://github.com/city96/ComfyUI-GGUF
+
+models:
+  # --- THE FIX: mmproj vision projector -------------------------------------
+  # ComfyUI-GGUF auto-pairs this BY FILENAME. It must sit in the SAME directory
+  # as the text encoder (models/text_encoders/), and its name must contain both
+  # "mmproj" and the encoder's quant-stripped stem ("qwen2.5-vl-7b-instruct").
+  # Get either wrong and the loader silently falls back to "Qwen-Image-Edit will
+  # be broken!". One mmproj serves EVERY quant of the encoder — it is always
+  # BF16 and is not quant-matched.
+  - url: https://huggingface.co/Aitrepreneur/FLX/resolve/main/Qwen2.5-VL-7B-Instruct-mmproj-BF16.gguf
+    local_path: text_encoders/Qwen2.5-VL-7B-Instruct-mmproj-BF16.gguf
+
+  # --- The EDIT UNet (not the same as the txt2img UNet) ---------------------
+  # Q8_0 tier active — TESTED on 24GB+.
+  - url: https://huggingface.co/Aitrepreneur/FLX/resolve/main/Qwen_Image_Edit-Q8_0.gguf
+    local_path: unet/Qwen_Image_Edit-Q8_0.gguf
+  # Lower-VRAM quants — URLs confirmed to resolve, UNTESTED by us. If you switch,
+  # update the filename in workflow.json node "1" to match.
+  # Q4_K_S (11.31 GB):
+  # - url: https://huggingface.co/Aitrepreneur/FLX/resolve/main/Qwen_Image_Edit-Q4_K_S.gguf
+  #   local_path: unet/Qwen_Image_Edit-Q4_K_S.gguf
+  # Q5_K_S:
+  # - url: https://huggingface.co/Aitrepreneur/FLX/resolve/main/Qwen_Image_Edit-Q5_K_S.gguf
+  #   local_path: unet/Qwen_Image_Edit-Q5_K_S.gguf
+
+  # --- Shared with photo-logo-qwen-image (skipped if already present) --------
+  - url: https://huggingface.co/Aitrepreneur/FLX/resolve/main/Qwen2.5-VL-7B-Instruct-UD-Q4_K_S.gguf
+    local_path: text_encoders/Qwen2.5-VL-7B-Instruct-UD-Q4_K_S.gguf
+  - url: https://huggingface.co/Aitrepreneur/FLX/resolve/main/qwen_image_vae.safetensors
+    local_path: vae/qwen_image_vae.safetensors
+  - url: https://huggingface.co/Aitrepreneur/FLX/resolve/main/Qwen-Image-Lightning-8steps-V1.0.safetensors
+    local_path: loras/Qwen-Image-Lightning-8steps-V1.0.safetensors

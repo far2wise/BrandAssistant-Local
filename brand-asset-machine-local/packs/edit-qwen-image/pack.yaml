@@ -1,0 +1,114 @@
+name: edit-qwen-image
+display_name: EDIT — Qwen-Image-Edit (GGUF)
+family: qwen
+kind: edit
+description: >-
+  Targeted edits to an already-generated asset: recolour a label to the palette,
+  swap a background, change a cap — while leaving the rest of the frame alone.
+  This is what references/consistency.md means by "editing beats regenerating":
+  a re-roll drifts off-model, an edit does not.
+runtime: local
+licence: Apache-2.0 (commercial use clean)
+depends_on: >-
+  packs/photo-logo-qwen-image (shares the Qwen2.5-VL text encoder, the
+  qwen_image VAE and the Lightning LoRA). This pack's manifest re-lists them so
+  it can also be applied standalone; apply_manifest skips files already present.
+
+# --- What we actually tested, on what ---
+tested:
+  status: VERIFIED end-to-end (real edit performed, not just installed)
+  date: 2026-08-07
+  gpu: NVIDIA GeForce RTX 5090, 32 GB VRAM (the 24GB+ tier)
+  comfyui: 0.30.0 / Python 3.12.11 / PyTorch 2.10.0+cu130
+  quant: Qwen_Image_Edit-Q8_0.gguf (20.3 GB)
+  results:
+    - >-
+      mmproj pairing confirmed in the ComfyUI log. BEFORE installing it:
+      "Error: Can't find mmproj file for 'Qwen2.5-VL-7B-Instruct-UD-Q4_K_S.gguf'
+      (matching:'qwen2.5-vl-7b-instruct')! Qwen-Image-Edit will be broken!"
+      AFTER: "Using mmproj 'Qwen2.5-VL-7B-Instruct-mmproj-BF16.gguf' for text
+      encoder 'Qwen2.5-VL-7B-Instruct-UD-Q4_K_S.gguf'."
+    - >-
+      Real edit on a still from the photo pack: "change the bottle cap to a matte
+      pale blue cap, keep the bottle, the coffee and the background exactly the
+      same". 47.9 s including the cold 20 GB load.
+    - >-
+      The edit was TARGETED, measured not eyeballed: splitting the 1024x1024
+      frame into 8 horizontal bands, mean absolute pixel change was 17.41 in the
+      cap band (rows 128-256) versus 2.6-7.4 everywhere else, and only 0.98% of
+      pixels changed by more than 30. The bottle, coffee, ice, background and
+      shadow survived intact.
+
+untested:
+  - >-
+    Lower-VRAM quants (Q5_K_S / Q4_K_S, 11.31 GB). URLs confirmed to resolve,
+    not run by us.
+  - >-
+    Multi-image edits. The upstream graph stitches two LoadImage inputs via
+    ImageStitch (and TextEncodeQwenImageEditPlus takes image1/image2/image3);
+    our graph is deliberately single-image.
+  - Inpainting with a mask (the upstream pack ships a separate super-inpainting graph).
+  - Edits at sizes far from 1 megapixel.
+
+# --- Settings baked into workflow.json ---
+settings:
+  sampler: euler
+  scheduler: simple
+  steps: 8            # matches the Lightning 8-step LoRA
+  cfg: 1.0
+  denoise: 1.0        # correct here: the edit is driven by ReferenceLatent, not partial denoise
+  input_normalisation: ImageScaleToTotalPixels @ 1.0 megapixels
+notable_wiring:
+  - >-
+    KSampler takes positive AND negative from the SAME ReferenceLatent node.
+    That is not a mistake — it is what the upstream graph does, and at cfg 1.0
+    the negative branch is unused. Do not "fix" it by adding a second encode.
+  - >-
+    latent_image comes from VAEEncode of the source image. Upstream routes this
+    through a "Switch latent [Crystools]" that chooses between an empty latent
+    (txt2img) and VAEEncode (edit); we dropped the switch and wired the edit path
+    directly, removing a custom-node dependency.
+
+usage:
+  how: >-
+    Stage the image to edit into ComfyUI's input dir (upload_image action:"stage"
+    for an existing output), point node "5" at it, and write the instruction in
+    node "7"'s `prompt`.
+  prompting: >-
+    Name the change AND state what must not change — "change X, keep everything
+    else exactly the same". Instructions that only name the change tend to
+    re-render more of the frame than you wanted.
+
+# --- Provenance and the fix-ups we had to make ---
+adapted_from: >-
+  The comfyui-mcp bundled `qwen-image-edit` pack. Contents were COPIED into this
+  repo — the bundled packs live under an npx cache path that changes between
+  invocations and must never be referenced.
+manual_fixups:
+  - >-
+    Sliced the upstream 45-node graph to 12 nodes: dropped the second LoadImage +
+    ImageStitch (multi-image), the Crystools latent switch, and the post-process
+    chain (UltimateSDUpscale / FastFilmGrain / FastLaplacianSharpen).
+  - >-
+    Replaced rgthree's "Power Lora Loader" with core LoraLoaderModelOnly, and fed
+    CLIP straight from CLIPLoaderGGUF (the Lightning LoRA patches the UNet only).
+    ComfyUI-GGUF is the only custom node required.
+known_gotchas:
+  - >-
+    THE mmproj IS MATCHED BY FILENAME, IN THE SAME DIRECTORY. ComfyUI-GGUF
+    (loader.py gguf_mmproj_loader) takes the text-encoder filename, strips its
+    quant suffix, then scans that encoder's own directory for a .gguf whose name
+    contains BOTH "mmproj" AND the stripped stem. So the file must sit in
+    models/text_encoders/ next to the encoder, and must keep its upstream name.
+    Rename it or file it elsewhere and it silently goes back to
+    "Qwen-Image-Edit will be broken!".
+  - >-
+    ONE mmproj covers EVERY quant of the encoder — it is always BF16 and is not
+    quant-matched. Our Q4_K_S encoder pairs with the BF16 mmproj fine.
+  - >-
+    The EDIT UNet is a SEPARATE model from the txt2img one. Installing the mmproj
+    alone silences the warning but does NOT give you editing: Qwen_Image_Distill
+    cannot do it, you need Qwen_Image_Edit.
+  - >-
+    Same custom-node placement and pip-dependency gotchas as the photo pack — see
+    packs/photo-logo-qwen-image/pack.yaml `known_gotchas`.

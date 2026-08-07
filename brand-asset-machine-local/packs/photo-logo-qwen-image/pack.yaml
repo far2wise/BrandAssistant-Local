@@ -80,11 +80,11 @@ known_gotchas:
     Qwen-Image-Edit will be broken!" followed by a long "clip missing: visual.*"
     list. That is EXPECTED and HARMLESS for this pack: txt2img only needs the
     text half of Qwen2.5-VL, and our verified PHOTO and LOGO runs came out clean.
-    But it means the VISION half is absent, so **Qwen-Image-Edit will not work**
-    until you also install a matching mmproj file. This matters because
-    references/consistency.md recommends Qwen-Image-Edit for small fixes
-    (recolouring a label, swapping a background) — that path is NOT installed by
-    this manifest and is NOT tested.
+    It means the VISION half is absent, so Qwen-Image-Edit will not work from
+    THIS pack alone. That is by design: editing lives in **packs/edit-qwen-image**,
+    which installs the mmproj projector plus the separate Qwen-Image-Edit UNet.
+    Install that pack if you want the touch-up path referenced by
+    references/consistency.md; this warning is expected and ignorable otherwise.
   - >-
     apply_manifest clones custom nodes into <ComfyUI install>/custom_nodes, but a
     Comfy-Desktop install launched with --base-directory loads them from
