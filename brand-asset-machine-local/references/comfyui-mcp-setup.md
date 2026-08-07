@@ -8,6 +8,12 @@ billing. This file gets that connection working.
 > routes to **Comfy Cloud** — a paid, remote service. For local generation use the
 > local-first server below.
 
+> **Windows users:** ComfyUI, the MCP server, and Claude Code all need to run
+> in the *same* environment (all-WSL2 or all-native-Windows) — `127.0.0.1`
+> means a different machine depending on which side of that split you're on.
+> See the README's [Install](../../README.md#install) section for the two
+> supported lanes before following the steps below.
+
 ## 1. Install and run ComfyUI
 
 Install ComfyUI (desktop app or the portable/CLI build) and update it to the
@@ -87,8 +93,9 @@ are used only for discovering and downloading models, never for generation.
    (`hardware-tiers.md`) are installed — fetch any missing ones.
 
 If the MCP isn't connected, do **not** attempt to generate — fix the connection
-first. Common causes: ComfyUI not started, wrong port in `COMFYUI_PORT`, or Claude
-not restarted after editing the config.
+first. Common causes: ComfyUI not started, wrong port in `COMFYUI_PORT`, Claude
+not restarted after editing the config, or — on Windows — ComfyUI and the MCP
+server ended up split across WSL2 and native Windows (see the callout above).
 
 ## Alternatives
 

@@ -32,7 +32,8 @@ palette held across every asset, and motion/texture templates never have.
   (this skill assumes [`artokun/comfyui-mcp`](https://github.com/artokun/comfyui-mcp), fully local).
 - An **NVIDIA GPU is strongly recommended**; Apple Silicon works with reduced
   speed. Model choices adapt to your VRAM — see the tier table below.
-- Claude Code or Claude Desktop (to run the skill and the MCP).
+- Claude Code (CLI or Desktop app) to run the skill and the MCP. See
+  [Install](#install) below for the Linux/WSL2 vs. Windows-native path.
 
 ## Model tiers at a glance
 
@@ -54,24 +55,56 @@ fallbacks) is in [`brand-asset-machine-local/references/hardware-tiers.md`](bran
 
 ## Install
 
-1. **Get ComfyUI running** and install
+Pick **one lane** and stay in it: Claude Code, the local MCP server, and
+ComfyUI all need to run in the *same* environment. Split them — e.g. Claude
+Code Desktop on native Windows talking to ComfyUI running inside WSL2 — and
+`127.0.0.1` stops meaning the same thing on both sides, so nothing connects.
+If you're not sure which lane you're in, match whichever environment already
+runs your GPU tools.
+
+### Linux / WSL2
+
+Use this if ComfyUI runs in a Linux shell — including inside WSL2 on Windows.
+
+1. **Get ComfyUI running** at `http://127.0.0.1:8188` and install
    [ComfyUI-Manager](https://github.com/ltdrdata/ComfyUI-Manager).
-2. **Connect the local MCP** (see
+2. **Add the MCP server**, from that same shell (see
    [`references/comfyui-mcp-setup.md`](brand-asset-machine-local/references/comfyui-mcp-setup.md)):
    ```bash
    claude mcp add comfyui -- npx -y comfyui-mcp
    ```
-3. **Install the skill.** Claude Code loads skills straight out of a
-   `skills/` folder — copy or symlink `brand-asset-machine-local/` into one:
+3. **Install the skill** — copy or symlink `brand-asset-machine-local/` into a
+   skills folder:
    - **Every project:** `~/.claude/skills/brand-asset-machine-local/`
    - **Just one project:** `<project>/.claude/skills/brand-asset-machine-local/`
-
    ```bash
    ln -s "$(pwd)/brand-asset-machine-local" ~/.claude/skills/brand-asset-machine-local
    ```
+4. **Run Claude Code** — the CLI in this same shell, or Desktop with its
+   environment picker pointed at this WSL2/Linux folder (not opened as a plain
+   Windows project). Restart and it picks the skill up automatically.
 
-   Restart Claude Code (or start a new session) and it picks the skill up
-   automatically — no separate install step or packaged file required.
+### Windows (native, no WSL2)
+
+Use this if ComfyUI runs directly on Windows and you want Claude Code Desktop
+without touching WSL2.
+
+1. **Install [Node.js for Windows](https://nodejs.org/)** (needed for `npx`).
+2. **Get ComfyUI running natively on Windows** — desktop build defaults to
+   `http://127.0.0.1:8000`, the portable/CLI build to `http://127.0.0.1:8188`.
+3. **Add the MCP server** from Claude Code Desktop's Connectors settings (or
+   run the CLI command from PowerShell/cmd if you're using the CLI on
+   Windows), setting `COMFYUI_PORT` to match step 2:
+   ```powershell
+   claude mcp add comfyui -- npx -y comfyui-mcp
+   ```
+4. **Install the skill** — copy `brand-asset-machine-local/` into
+   `%USERPROFILE%\.claude\skills\brand-asset-machine-local`. Symlinks work too
+   (`mklink /D` in an elevated prompt), but a plain copy is less fuss — just
+   re-copy after `git pull`.
+5. **Open the project in Claude Code Desktop without the WSL environment
+   picker**, so it stays on the native Windows config. Restart and the skill
+   loads automatically.
 
 ## Usage
 
