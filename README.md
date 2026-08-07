@@ -68,10 +68,12 @@ Use this if ComfyUI runs in a Linux shell — including inside WSL2 on Windows.
 
 1. **Get ComfyUI running** at `http://127.0.0.1:8188` and install
    [ComfyUI-Manager](https://github.com/ltdrdata/ComfyUI-Manager).
-2. **Add the MCP server**, from that same shell (see
+2. **Add the MCP server**, from that same shell, with **user scope** so it's
+   visible from any project (the default, local scope, only applies to the
+   folder you ran the command from — see
    [`references/comfyui-mcp-setup.md`](brand-asset-machine-local/references/comfyui-mcp-setup.md)):
    ```bash
-   claude mcp add comfyui -- npx -y comfyui-mcp
+   claude mcp add --scope user comfyui -- npx -y comfyui-mcp
    ```
 3. **Install the skill** — copy or symlink `brand-asset-machine-local/` into a
    skills folder:
@@ -98,16 +100,20 @@ without touching WSL2.
    use it to add the server:
    ```powershell
    irm https://claude.ai/install.ps1 | iex
-   claude mcp add comfyui -- npx -y comfyui-mcp
+   claude mcp add --scope user comfyui -- npx -y comfyui-mcp
    ```
-   If PowerShell reports `claude` not recognized right after installing, the
-   installer put it in `%USERPROFILE%\.local\bin`, which isn't on PATH yet in
-   your current session — either open a new PowerShell window (the installer
-   adds it to your user PATH), or run this once in the current one:
+   `--scope user` matters — without it, the server is only registered for the
+   project folder you ran the command from and won't be visible when you run
+   the skill from elsewhere. If PowerShell reports `claude` not recognized
+   right after installing, the installer put it in `%USERPROFILE%\.local\bin`,
+   which isn't on PATH yet in your current session — either open a new
+   PowerShell window (the installer adds it to your user PATH), or run this
+   once in the current one:
    ```powershell
-   & "$env:USERPROFILE\.local\bin\claude.exe" mcp add comfyui -- npx -y comfyui-mcp
+   & "$env:USERPROFILE\.local\bin\claude.exe" mcp add --scope user comfyui -- npx -y comfyui-mcp
    ```
-   Set `COMFYUI_PORT` to match step 2. See
+   Set `COMFYUI_PORT` to match step 2. Verify with `claude mcp list` (should
+   show `comfyui` as connected). See
    [`references/comfyui-mcp-setup.md`](brand-asset-machine-local/references/comfyui-mcp-setup.md)
    for the manual `%USERPROFILE%\.claude.json` alternative if you'd rather
    skip the CLI install.

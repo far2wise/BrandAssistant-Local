@@ -41,8 +41,15 @@ npx -y comfyui-mcp
 ### Claude Code
 
 ```bash
-claude mcp add comfyui -- npx -y comfyui-mcp
+claude mcp add --scope user comfyui -- npx -y comfyui-mcp
 ```
+
+**Always pass `--scope user`.** The default (`local`) scope only registers
+the server for the project folder you ran the command from — run it without
+the flag from, say, your home directory, and the skill won't find the server
+when it runs from a different project later. Check what's registered and
+where with `claude mcp list`; inside a session, `/mcp` shows live connection
+status too.
 
 The Desktop app **includes** Claude Code's engine but does **not** put a
 `claude` command on your PATH — `claude mcp add` needs the CLI installed
@@ -111,8 +118,10 @@ are used only for discovering and downloading models, never for generation.
 
 If the MCP isn't connected, do **not** attempt to generate — fix the connection
 first. Common causes: ComfyUI not started, wrong port in `COMFYUI_PORT`, Claude
-not restarted after editing the config, or — on Windows — ComfyUI and the MCP
-server ended up split across WSL2 and native Windows (see the callout above).
+not restarted after editing the config, the server was added without
+`--scope user` so it's invisible outside the project it was added from (check
+with `claude mcp list`), or — on Windows — ComfyUI and the MCP server ended up
+split across WSL2 and native Windows (see the callout above).
 
 ## Alternatives
 
