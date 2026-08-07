@@ -44,7 +44,22 @@ npx -y comfyui-mcp
 claude mcp add comfyui -- npx -y comfyui-mcp
 ```
 
-…or add to `~/.claude/settings.json` directly:
+The Desktop app **includes** Claude Code's engine but does **not** put a
+`claude` command on your PATH — `claude mcp add` needs the CLI installed
+separately:
+
+- **macOS / Linux / WSL2:** `curl -fsSL https://claude.ai/install.sh | bash`
+- **Native Windows (PowerShell):** `irm https://claude.ai/install.ps1 | iex`
+
+Also note the Desktop app's **Connectors** settings panel only lists
+pre-published services (GitHub, Slack, etc.) — searching it for `comfyui-mcp`
+won't find anything, since it's not a listed connector. A custom local stdio
+server like this one always goes through the CLI command above, or by editing
+the config file by hand:
+
+- **Project scope:** `.mcp.json` in the project root
+- **User scope:** `~/.claude.json` (macOS/Linux/WSL2) or
+  `%USERPROFILE%\.claude.json` (native Windows)
 
 ```json
 {
@@ -62,6 +77,8 @@ claude mcp add comfyui -- npx -y comfyui-mcp
   }
 }
 ```
+
+Restart Claude Code (CLI or Desktop) after editing the file by hand.
 
 ### Claude Desktop
 

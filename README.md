@@ -92,12 +92,18 @@ without touching WSL2.
 1. **Install [Node.js for Windows](https://nodejs.org/)** (needed for `npx`).
 2. **Get ComfyUI running natively on Windows** — desktop build defaults to
    `http://127.0.0.1:8000`, the portable/CLI build to `http://127.0.0.1:8188`.
-3. **Add the MCP server** from Claude Code Desktop's Connectors settings (or
-   run the CLI command from PowerShell/cmd if you're using the CLI on
-   Windows), setting `COMFYUI_PORT` to match step 2:
+3. **Add the MCP server.** Desktop's Connectors panel only lists pre-published
+   services — it won't find `comfyui-mcp` by search. Instead, install the CLI
+   separately (Desktop bundles the engine but not the `claude` command) and
+   use it to add the server:
    ```powershell
+   irm https://claude.ai/install.ps1 | iex
    claude mcp add comfyui -- npx -y comfyui-mcp
    ```
+   Set `COMFYUI_PORT` to match step 2. See
+   [`references/comfyui-mcp-setup.md`](brand-asset-machine-local/references/comfyui-mcp-setup.md)
+   for the manual `%USERPROFILE%\.claude.json` alternative if you'd rather
+   skip the CLI install.
 4. **Install the skill** — copy `brand-asset-machine-local/` into
    `%USERPROFILE%\.claude\skills\brand-asset-machine-local`. Symlinks work too
    (`mklink /D` in an elevated prompt), but a plain copy is less fuss — just
